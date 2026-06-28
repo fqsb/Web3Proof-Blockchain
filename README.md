@@ -86,3 +86,13 @@ cd contracts && npm test
 cd backend && go test ./...
 cd frontend && npm run build
 ```
+
+## Screenshots
+
+### Home
+
+![Web3Proof home](docs/screenshots/home.png)
+
+### Public verification
+
+![Web3Proof public verification](docs/screenshots/verify.png)
