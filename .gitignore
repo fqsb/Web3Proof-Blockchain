@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output and generated contract files
+dist/
+build/
+frontend/dist/
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+contracts/deployments/
+frontend/tsconfig.tsbuildinfo
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+deploy/.env
+frontend/.env*
+!frontend/.env.example
+
+# Runtime data, uploads, and local databases
+backend/server
+backend/server.exe
+backend/server.exe~
+backend/*.db
+backend/storage/
+
+# Logs and temporary files
+*.log
+logs/
+.tmp/
+.DS_Store

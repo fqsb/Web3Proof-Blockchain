@@ -1,0 +1,234 @@
+CREATE DATABASE IF NOT EXISTS web3proof DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE web3proof;
+
+CREATE TABLE users (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  wallet_address VARCHAR(42) NOT NULL,
+  did VARCHAR(128) NULL,
+  nickname VARCHAR(64) NULL,
+  avatar_url VARCHAR(512) NULL,
+  bio TEXT NULL,
+  email VARCHAR(128) NULL,
+  active_role VARCHAR(20) NOT NULL DEFAULT 'creator',
+  is_did_registered TINYINT(1) NOT NULL DEFAULT 0,
+  did_tx_hash VARCHAR(66) NULL,
+  status TINYINT NOT NULL DEFAULT 1,
+  last_active_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_users_wallet (wallet_address),
+  UNIQUE KEY uk_users_did (did)
+) ENGINE=InnoDB;
+
+CREATE TABLE user_roles (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  role_code VARCHAR(20) NOT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_role (user_id, role_code)
+) ENGINE=InnoDB;
+
+CREATE TABLE wallet_accounts (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  wallet_address VARCHAR(42) NOT NULL,
+  is_primary TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_wallet_accounts_address (wallet_address)
+) ENGINE=InnoDB;
+
+CREATE TABLE categories (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(32) NOT NULL,
+  name VARCHAR(64) NOT NULL,
+  description TEXT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_categories_code (code)
+) ENGINE=InnoDB;
+
+INSERT INTO categories (code, name) VALUES
+('digital_art', '数字作品'),
+('course_project', '课程项目'),
+('competition', '竞赛成果'),
+('research', '科研成果'),
+('certificate', '证书证明'),
+('source_code', '代码项目');
+
+CREATE TABLE works (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  title VARCHAR(128) NOT NULL,
+  description TEXT NULL,
+  category_id INT UNSIGNED NULL,
+  external_url VARCHAR(512) NULL,
+  visibility VARCHAR(20) NOT NULL DEFAULT 'private',
+  status VARCHAR(20) NOT NULL DEFAULT 'draft',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_works_user (user_id),
+  INDEX idx_works_status (status)
+) ENGINE=InnoDB;
+
+CREATE TABLE work_files (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  work_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  file_name VARCHAR(256) NOT NULL,
+  file_type VARCHAR(80) NULL,
+  storage_key VARCHAR(512) NOT NULL,
+  storage_url VARCHAR(512) NULL,
+  file_size BIGINT NOT NULL DEFAULT 0,
+  sha256_hash VARCHAR(66) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_work_files_work (work_id),
+  INDEX idx_work_files_hash (sha256_hash)
+) ENGINE=InnoDB;
+
+CREATE TABLE evidence_records (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  work_id BIGINT UNSIGNED NOT NULL,
+  work_file_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  evidence_no VARCHAR(40) NOT NULL,
+  evidence_no_hash VARCHAR(66) NOT NULL,
+  file_hash VARCHAR(66) NOT NULL,
+  owner_address VARCHAR(42) NOT NULL,
+  metadata_uri VARCHAR(512) NULL,
+  chain_evidence_id BIGINT UNSIGNED NULL,
+  contract_address VARCHAR(42) NULL,
+  tx_hash VARCHAR(66) NULL,
+  block_number BIGINT UNSIGNED NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending_chain',
+  confirmed_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_evidence_no (evidence_no),
+  UNIQUE KEY uk_evidence_tx (tx_hash),
+  INDEX idx_evidence_hash (file_hash),
+  INDEX idx_evidence_user (user_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE certificates (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  evidence_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  certificate_no VARCHAR(40) NOT NULL,
+  pdf_storage_key VARCHAR(512) NOT NULL,
+  verify_url VARCHAR(512) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_certificate_no (certificate_no)
+) ENGINE=InnoDB;
+
+CREATE TABLE certification_applications (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  work_id BIGINT UNSIGNED NOT NULL,
+  evidence_id BIGINT UNSIGNED NOT NULL,
+  materials_desc TEXT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  reviewer_id BIGINT UNSIGNED NULL,
+  review_note TEXT NULL,
+  reviewed_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_applications_status (status)
+) ENGINE=InnoDB;
+
+CREATE TABLE sbt_credentials (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  work_id BIGINT UNSIGNED NOT NULL,
+  evidence_id BIGINT UNSIGNED NOT NULL,
+  application_id BIGINT UNSIGNED NULL,
+  token_id BIGINT UNSIGNED NOT NULL,
+  contract_address VARCHAR(42) NOT NULL,
+  tx_hash VARCHAR(66) NOT NULL,
+  token_uri VARCHAR(512) NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  minted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_sbt_tx (tx_hash),
+  UNIQUE KEY uk_sbt_token (contract_address, token_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE verifier_profiles (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  org_name VARCHAR(128) NOT NULL,
+  industry VARCHAR(64) NULL,
+  contact_email VARCHAR(128) NULL,
+  website VARCHAR(256) NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'approved',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_verifier_user (user_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE verification_reports (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  viewer_id BIGINT UNSIGNED NULL,
+  target_user_id BIGINT UNSIGNED NULL,
+  query_type VARCHAR(30) NOT NULL,
+  query_value VARCHAR(512) NOT NULL,
+  passed TINYINT(1) NOT NULL DEFAULT 0,
+  report_json JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE reputation_scores (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  project_score INT UNSIGNED NOT NULL DEFAULT 0,
+  cert_score INT UNSIGNED NOT NULL DEFAULT 0,
+  activity_score INT UNSIGNED NOT NULL DEFAULT 0,
+  total_score INT UNSIGNED NOT NULL DEFAULT 0,
+  grade CHAR(1) NOT NULL DEFAULT 'D',
+  chain_tx_hash VARCHAR(66) NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_reputation_user (user_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE chain_networks (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(32) NOT NULL,
+  name VARCHAR(64) NOT NULL,
+  chain_id BIGINT NOT NULL,
+  rpc_url VARCHAR(512) NULL,
+  explorer_url VARCHAR(512) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_chain_code (code)
+) ENGINE=InnoDB;
+
+CREATE TABLE contract_configs (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  network_code VARCHAR(32) NOT NULL,
+  contract_name VARCHAR(64) NOT NULL,
+  contract_address VARCHAR(42) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE chain_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  contract_name VARCHAR(64) NOT NULL,
+  event_name VARCHAR(64) NOT NULL,
+  tx_hash VARCHAR(66) NOT NULL,
+  block_number BIGINT UNSIGNED NOT NULL,
+  log_index INT UNSIGNED NOT NULL,
+  payload JSON NULL,
+  processed TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_chain_events_tx (tx_hash)
+) ENGINE=InnoDB;
+
+CREATE TABLE audit_logs (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NULL,
+  action VARCHAR(64) NOT NULL,
+  resource VARCHAR(128) NULL,
+  detail TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
